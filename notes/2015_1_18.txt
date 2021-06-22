@@ -1,0 +1,11 @@
+This is the stack trace I'm getting when m_range is being trampled on when moving between functions.
+Very strange.
+
+It seems as though the dll resolving step is trampling on part of the memory of the ThreadBundle private implementation.
+
+0   _dl_fixup   dl-runtime.c    87  0x7ffff7de86d4  
+1   _dl_runtime_resolve dl-trampoline.S 42  0x7ffff7def235  
+2   tc::go  trace.cpp   1144    0x7ffff7bc6457  
+3   main    main.cpp    25  0x400902    
+
+

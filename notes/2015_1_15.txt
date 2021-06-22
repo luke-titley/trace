@@ -1,0 +1,20 @@
+Time estimates for getting the renderer into shape.
+
+2 : Add support for progressive rendering with qt.
+1 : Simplify the irradience caching to sample just a lower resolution image.
+1 : Add support for a camera matrix.
+2 : Add support for shaders written in c++ and per triangle shader assignment.
+2 : Write a pure C API for trace.
+1 : Write a ctypes python API on top of that.
+1 : Create a VERY simple exporter from blender to trace.
+2 : Add support for importing UVs. 
+2 : Add support for importing normals.
+C : Implement some half decent importance sampling to speed up renders.
+1 : Add support for pixel iterators which specify where we will be creating samples.
+5 : Refactor and tidy messy areas of code. Ensure comments are correct and seperation lines are all the right length.
+
+Two weeks if I have the evening free every night for the next two weeks.
+
+
+C = Coffee (I don't know how long it will take)
+The numbers are evenings.

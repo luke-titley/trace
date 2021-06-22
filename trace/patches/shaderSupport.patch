@@ -1,0 +1,238 @@
+diff --git a/trace/include/trace/lsditerator.h b/trace/include/trace/lsditerator.h
+index 22df410..e0e67e6 100644
+--- a/trace/include/trace/lsditerator.h
++++ b/trace/include/trace/lsditerator.h
+@@ -62,6 +62,10 @@ public:
+     /// in the current object..
+     virtual const Bounds &getBounds() const;
+ 
++    /// \return The shader reference of the current object. This should always
++    /// return a value.
++    virtual const char * getShaderRef() const;
++
+     /// \return true if the current object has triangles. false if not.
+     virtual bool hasTriangles() const;
+ 
+diff --git a/trace/include/trace/shader.h b/trace/include/trace/shader.h
+index 437682a..ec4fc78 100644
+--- a/trace/include/trace/shader.h
++++ b/trace/include/trace/shader.h
+@@ -71,7 +71,8 @@ public:
+     /// Use traceResult.m_geoId as the geoId passed into shadeApi methods.
+     virtual void accumulate(const TraceResult &traceResult,
+                             const Radiance &radiance, const Ray &ray,
+-                            const ShadeAPI &shadeApi,
++                            const ShadeAPI &shadeApi, 
++                            const bool maxRayDepthReached,
+                             Variant &result) const = 0;
+ };
+ }  // namespace tc
+diff --git a/trace/include/trace/shadersDiffuse.h b/trace/include/trace/shadersDiffuse.h
+index a848f39..62c0046 100644
+--- a/trace/include/trace/shadersDiffuse.h
++++ b/trace/include/trace/shadersDiffuse.h
+@@ -51,7 +51,7 @@ public:
+     /// Use traceResult.m_geoId as the geoId passed into shadeApi methods.
+     void accumulate(const TraceResult &traceResult, const Radiance &radiance,
+                     const Ray &ray, const ShadeAPI &shadeApi,
+-                    Variant &result) const;
++                    const bool maxRayDepthReached, Variant &result) const;
+ };
+ }  // namespace shaders
+ }  // namespace tc
+diff --git a/trace/lsd/Makefile b/trace/lsd/Makefile
+index bff479a..2d86c9b 100644
+--- a/trace/lsd/Makefile
++++ b/trace/lsd/Makefile
+@@ -11,8 +11,7 @@ clean:
+ 	rm lib/liblsd.so
+ 	rm lsdParse
+ 
+-#src/parse.cc: grammar Makefile
+-src/parse.cc:
++src/parse.cc: grammar Makefile
+ 	bisonc++ --parsefun-source=src/parse.cc\
+ 		     --baseclass-header=src/private_Parserbase.h\
+ 			 --class-header=src/private_Parser.h\
+diff --git a/trace/lsd/files/box.lsd b/trace/lsd/files/box.lsd
+index 6f8106d..79f3fa2 100644
+--- a/trace/lsd/files/box.lsd
++++ b/trace/lsd/files/box.lsd
+@@ -2,6 +2,7 @@ def Xform "root"
+ {
+     def Xform "world"
+     {
++        Shader shader = "diffuse"
+         def PolyMesh "geo"
+         {
+             Point[] verticies = [ (0.0 , -0.0 , 0.0) ]
+diff --git a/trace/lsd/grammar b/trace/lsd/grammar
+index 393dad4..9e25521 100644
+--- a/trace/lsd/grammar
++++ b/trace/lsd/grammar
+@@ -10,6 +10,7 @@
+ %token DOUBLE
+ %token INT
+ %token STRING
++%token SHADER
+ %token IDENTIFIER
+ %stype lsd::Variant
+ %%
+@@ -18,6 +19,30 @@
+ xform:
+     DEF XFORM STRING
+     '{'
++        shader_ref_property
++        children
++    '}'
++    {
++        lsd::Xform * xform = m_stage.alloc<lsd::Xform>($3.m_string);
++        xform->m_shaderRef = $5.m_string;
++        xform->m_children = $6.m_children;
++        $$.m_node = xform;
++        m_stage.setRoot(xform);
++    }
++|
++    DEF XFORM STRING
++    '{'
++        shader_ref_property
++    '}'
++    {
++        lsd::Xform * xform = m_stage.alloc<lsd::Xform>($3.m_string);
++        xform->m_shader = $5.m_string;
++        $$.m_node = xform;
++        m_stage.setRoot(xform);
++    }
++|
++    DEF XFORM STRING
++    '{'
+         children
+     '}'
+     {
+@@ -85,6 +110,14 @@ children:
+ ;
+ 
+ //------------------------------------------------------------------------------
++shader_ref_property:
++    SHADER IDENTIFIER '=' STRING
++    {
++        $$.m_string = $4.m_string;
++    }
++;
++
++//------------------------------------------------------------------------------
+ verticies_property:
+     POINT '[' ']' VERTICIES '=' '[' ']'
+     {
+diff --git a/trace/lsd/include/lsd/lsd.h b/trace/lsd/include/lsd/lsd.h
+index dc284d9..35c99c9 100644
+--- a/trace/lsd/include/lsd/lsd.h
++++ b/trace/lsd/include/lsd/lsd.h
+@@ -105,9 +105,11 @@ class Xform : public Node
+ {
+ public:
+     typedef std::vector<Node*> Children;
++    char * m_shaderRef;
+     Children * m_children;
+     inline Xform(char * name):
+                  Node(true, name),
++                 m_shaderRef(0),
+                  m_children(0)
+     {}
+ };
+diff --git a/trace/lsd/src/Parser.cc b/trace/lsd/src/Parser.cc
+index e6b4dcd..1246c3c 100644
+--- a/trace/lsd/src/Parser.cc
++++ b/trace/lsd/src/Parser.cc
+@@ -213,6 +213,10 @@ int lsd_private::Parser::lex()
+             {
+                 return TRIANGLES;
+             }
++            else if(m_buffer == "Shader")
++            {
++                return SHADER;
++            }
+             else if(m_buffer == "Triangle")
+             {
+                 return TRIANGLE;
+diff --git a/trace/src/lsditerator.cpp b/trace/src/lsditerator.cpp
+index 179a7de..386d05c 100644
+--- a/trace/src/lsditerator.cpp
++++ b/trace/src/lsditerator.cpp
+@@ -111,8 +111,8 @@ bool lsdObjectIterator::next()
+     const bool shouldContinue = m_stageIterator.next();
+     if (shouldContinue)
+     {
+-        // Returns a TriangleIterator for looping over the triangles in this
+-        // polymesh.
++        // Updates the triangle iterator for looping over triangles in the
++        // current mesh.
+         const lsd::Node &node = *m_stageIterator;
+         if (node.isPolyMesh())
+         {
+@@ -136,6 +136,13 @@ const Bounds &lsdObjectIterator::getBounds() const
+ }
+ 
+ //------------------------------------------------------------------------------
++const char * lsdObjectIterator::getShaderRef() const
++{
++    lsd::Node & current = (*m_stageIterator);
++    return m_stageIterator.getShaderRef();
++}
++
++//------------------------------------------------------------------------------
+ bool lsdObjectIterator::hasTriangles() const
+ {
+     const lsd::Node &node = *m_stageIterator;
+diff --git a/trace/src/shade.cpp b/trace/src/shade.cpp
+index af6f9d8..a2f9042 100644
+--- a/trace/src/shade.cpp
++++ b/trace/src/shade.cpp
+@@ -122,7 +122,7 @@ inline Radiance shadeFragment(const GeoAPI &geoApi, const ShadeAPI &shadeApi,
+                     resultColor = color;
+                 }
+                 // If we're not at the bottom of the shade stack, then add our
+-                // shade result to our parent shader. Our only purpose to to
++                // shade result to our parent shader. Our only purpose is to
+                 // contribute to the radiance of our parent shader.
+                 else
+                 {
+@@ -133,6 +133,7 @@ inline Radiance shadeFragment(const GeoAPI &geoApi, const ShadeAPI &shadeApi,
+                     const Radiance radiance(frame.m_traceResult, color);
+                     parentShader.accumulate(parentFrame.m_traceResult, radiance,
+                                             frame.m_ray, shadeApi,
++                                            maxRayDepthReached,
+                                             parentFrame.m_radianceSum);
+                 }
+             }
+@@ -147,8 +148,8 @@ inline Radiance shadeFragment(const GeoAPI &geoApi, const ShadeAPI &shadeApi,
+                     new (&resultTraceResult) TraceResult(frame.m_traceResult);
+                     resultColor = color;
+                 }
+-                // Otherwise add the default colour for when we don't hit
+-                // anything to the parent shader.
++                // Otherwise add the default colour (for when we don't hit
++                // anything) to the parent shader.
+                 else
+                 {
+                     ShadeStackFrame &parentFrame = shadeStack.top(1);
+@@ -158,6 +159,7 @@ inline Radiance shadeFragment(const GeoAPI &geoApi, const ShadeAPI &shadeApi,
+                     const Radiance radiance(frame.m_traceResult, color);
+                     parentShader.accumulate(parentFrame.m_traceResult, radiance,
+                                             frame.m_ray, shadeApi,
++                                            maxRayDepthReached,
+                                             parentFrame.m_radianceSum);
+                 }
+             }
+diff --git a/trace/src/shadersDiffuse.cpp b/trace/src/shadersDiffuse.cpp
+index f10ec1d..2191e97 100644
+--- a/trace/src/shadersDiffuse.cpp
++++ b/trace/src/shadersDiffuse.cpp
+@@ -24,6 +24,7 @@ namespace tc
+ void shaders::Diffuse::accumulate(const TraceResult &traceResult,
+                                   const Radiance &radiance, const Ray &ray,
+                                   const ShadeAPI &shadeApi,
++                                  const bool maxRayDepthReached,
+                                   Variant &result) const
+ {
+     const SurfaceFrame &surfaceFrame =

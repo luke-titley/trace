@@ -1,0 +1,56 @@
+performance_results.append({
+	'id' : 1423116709
+	'render_command' : ['./trace', '--render', '--outputFilename', 'out.png', '--samplesPerFragment', '4', '--samplesPerPixel', '1', '--threadCount', '4', '--width', '256', '--height', '256'],
+	'average_elapsed_time' : 8.666667,
+})
+performance_results.append({
+	'id' : 1423144489
+	'render_command' : ['./trace', '--render', '--outputFilename', 'out.png', '--samplesPerFragment', '4', '--samplesPerPixel', '1', '--threadCount', '4', '--width', '256', '--height', '256'],
+	'average_elapsed_time' : 8.666667,
+})
+performance_results.append({
+	'id' : 1423144927
+	'render_command' : ['./trace', '--render', '--outputFilename', 'out.png', '--samplesPerFragment', '4', '--samplesPerPixel', '1', '--threadCount', '4', '--width', '256', '--height', '256'],
+	'average_elapsed_time' : 9.000000,
+})
+performance_results.append({
+	'id' : 1423145912
+	'render_command' : ['./trace', '--render', '--outputFilename', 'out.png', '--samplesPerFragment', '4', '--samplesPerPixel', '1', '--threadCount', '4', '--width', '256', '--height', '256'],
+	'average_elapsed_time' : 9.666667,
+})
+performance_results.append({
+	'id' : 1423158524
+	'render_command' : ['./trace', '--render', '--outputFilename', 'out.png', '--samplesPerFragment', '4', '--samplesPerPixel', '1', '--threadCount', '4', '--width', '256', '--height', '256'],
+	'average_elapsed_time' : 9.333333,
+})
+# The tests immediately below this point represent the performance after the refactor I made
+# to decouple the C stack from the ray tracer recursion. All recursion is performed by our
+# own stack.
+# It appears as though this has had some significantly negative performance implications.
+#
+# At this point the meaning of 'samplesPerFragment' has changed again.
+# In the above tests, the actualy amount of samples traced per shade is samplesPerFragment*samplesPerFragment. 
+# So in the above tests the amount of samples being traced was 4*4 = 16.
+#
+# Now the amount of samples traced is: samplesPerFragment*samplesPerFragment*4.
+# So if we want the amount of samples traced to be the same as before, we need to set 'samplesPerFragment' to '2'.
+performance_results.append({
+	'id' : 1424099609
+	'render_command' : ['./trace', '--render', '--outputFilename', 'out.png', '--samplesPerFragment', '2', '--samplesPerPixel', '1', '--threadCount', '4', '--width', '256', '--height', '256'],
+	'average_elapsed_time' : 105.333333,
+})
+
+# I fixed a numerical bug in Vector3, introduced by my refactor. This was the source of the performance problem.
+performance_results.append({
+	'id' : 1424261386
+	'render_command' : ['./trace', '--render', '--outputFilename', 'out.png', '--samplesPerFragment', '2', '--samplesPerPixel', '1', '--threadCount', '4', '--width', '256', '--height', '256'],
+	'average_elapsed_time' : 10.333333,
+})
+
+# I have changed the FrameStack class to allocate on the stack rather than the heap.
+# I hoped this would improve the raytrace performance, but it hasn't.
+performance_results.append({
+	'id' : 1424401550
+	'render_command' : ['./trace', '--render', '--outputFilename', 'out.png', '--samplesPerFragment', '2', '--samplesPerPixel', '1', '--threadCount', '4', '--width', '256', '--height', '256'],
+	'average_elapsed_time' : 11.333333,
+})

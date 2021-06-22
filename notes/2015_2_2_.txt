@@ -1,0 +1,10 @@
+Have abandoned iradiance caching and global illumination for the time being,
+as ambient occlusion still produces a nice result and is much quicker to compute.
+Once KDTree is quick enough, will try a second attempt at global illumination
+rendering.
+
+TODO:
+* Find the performance problem in scene::trace, it seems to be slowing down
+    exponentially.
+* Implement smarter kdtree splitting algorithm, using costing introduced in
+    Realtime Rendering.

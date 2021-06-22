@@ -1,0 +1,171 @@
+%baseclass-preinclude cstdlib
+%token XFORM
+%token POLYMESH
+%token POINT
+%token VERTICIES
+%token TRIANGLE
+%token TRIANGLES
+%token ASSET
+%token DEF
+%token DOUBLE
+%token INT
+%token STRING
+%token IDENTIFIER
+%stype lsd::Variant
+%%
+
+//------------------------------------------------------------------------------
+xform:
+    DEF XFORM STRING
+    '{'
+        children
+    '}'
+    {
+        lsd::Xform * xform = m_stage.alloc<lsd::Xform>($3.m_string);
+        xform->m_children = $5.m_children;
+        $$.m_node = xform;
+        m_stage.setRoot(xform);
+    }
+|
+    DEF XFORM STRING
+    '{'
+    '}'
+    {
+        lsd::Xform * xform = m_stage.alloc<lsd::Xform>($3.m_string);
+        $$.m_node = xform;
+        m_stage.setRoot(xform);
+    }
+;
+
+//------------------------------------------------------------------------------
+polymesh: DEF POLYMESH STRING
+'{'
+    verticies_property
+    triangles_property
+'}'
+    {
+        lsd::PolyMesh * polymesh = m_stage.alloc<lsd::PolyMesh>($3.m_string);
+        polymesh->m_verticies = $5.m_verticies;
+        polymesh->m_triangles = $6.m_triangles;
+        $$.m_node = polymesh;
+        m_stage.setRoot(polymesh);
+    }
+;
+
+//------------------------------------------------------------------------------
+children:
+    xform
+    {
+        lsd::Xform::Children * children = m_stage.alloc<lsd::Xform::Children>();
+        children->push_back($1.m_node);
+        $$.m_children = children;
+    }
+|
+    children xform
+    {
+        lsd::Xform::Children * children = $1.m_children;
+        children->push_back($2.m_node);
+        $$.m_children = children;
+    }
+|
+    polymesh
+    {
+        lsd::Xform::Children * children =
+            m_stage.alloc<lsd::Xform::Children>();
+        children->push_back($1.m_node);
+        $$.m_children = children;
+    }
+|
+    children polymesh
+    {
+        lsd::Xform::Children * children = $1.m_children;
+        children->push_back($2.m_node);
+        $$.m_children = children;
+    }
+;
+
+//------------------------------------------------------------------------------
+verticies_property:
+    POINT '[' ']' VERTICIES '=' '[' ']'
+    {
+        $$.m_verticies = m_stage.alloc<lsd::PolyMesh::Verticies>();
+    }
+|
+    POINT '[' ']' VERTICIES '=' '[' verticies ']'
+    {
+        $$.m_verticies = $7.m_verticies;
+    }
+;
+
+//------------------------------------------------------------------------------
+triangles_property:
+    TRIANGLE '[' ']' TRIANGLES '=' '[' ']'
+    {
+        $$.m_triangles = m_stage.alloc<lsd::PolyMesh::Triangles>();
+    }
+|
+    TRIANGLE '[' ']' TRIANGLES '=' '[' triangles ']'
+    {
+        $$.m_triangles = $7.m_triangles;
+    }
+;
+
+//------------------------------------------------------------------------------
+verticies:
+    vertex
+    {
+        lsd::PolyMesh::Verticies * verticies =
+            m_stage.alloc<lsd::PolyMesh::Verticies>();
+        verticies->push_back($1.m_vertex);
+        $$.m_verticies = verticies;
+    }
+|
+    verticies ',' vertex
+    {
+        lsd::PolyMesh::Verticies * verticies = $1.m_verticies;
+        verticies->push_back($3.m_vertex);
+        $$.m_verticies = verticies;
+    }
+;
+
+//------------------------------------------------------------------------------
+vertex:
+    '(' DOUBLE ',' DOUBLE ',' DOUBLE ')'
+    {
+        lsd::Vertex vertex;
+        vertex.x = $2.m_double;
+        vertex.y = $4.m_double;
+        vertex.z = $6.m_double;
+        $$.m_vertex = vertex;
+    }
+;
+
+//------------------------------------------------------------------------------
+triangles:
+    triangle
+    {
+        lsd::PolyMesh::Triangles * triangles =
+            m_stage.alloc<lsd::PolyMesh::Triangles>();
+        triangles->push_back($1.m_triangle);
+        $$.m_triangles = triangles;
+    }
+|
+    triangles ',' triangle
+    {
+        lsd::PolyMesh::Triangles * triangles = $1.m_triangles;
+        triangles->push_back($3.m_triangle);
+        $$.m_triangles = triangles;
+    }
+;
+
+//------------------------------------------------------------------------------
+triangle:
+    '(' INT ',' INT ',' INT ')'
+    {
+        lsd::Triangle triangle;
+        triangle.a = $2.m_int;
+        triangle.b = $4.m_int;
+        triangle.c = $6.m_int;
+        $$.m_triangle = triangle;
+    }
+;

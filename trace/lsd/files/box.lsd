@@ -1,0 +1,12 @@
+def Xform "root"
+{
+    def Xform "world"
+    {
+        def PolyMesh "geo"
+        {
+            Point[] verticies = [ (0.0 , -0.0 , 0.0) ]
+            Triangle[] triangles = [ ( 0, 1, 2 ),
+                                     (3, 4, 5) ]
+        }
+    }
+}

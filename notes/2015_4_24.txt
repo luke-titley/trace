@@ -1,0 +1,23 @@
+Plan
+* Tidy up the qtrace code ready for sharing.
+* Produce unit tests for everything.
+* Ensure docs cover everything.
+* Alignment for the Vector3 type.
+    This page implies that alignment if data types on intel and amd is no longer
+    such a performance hit. 
+    (http://lemire.me/blog/archives/2012/05/31/data-alignment-for-speed-myth-or-reality/)
+        "The address of a block returned by malloc or realloc in GNU systems is
+        always a multiple of eight (or sixteen on 64-bit systems). If you need a
+        block whose address is a multiple of a higher power of two than that, use
+        aligned_alloc or posix_memalign. aligned_alloc and posix_memalign are
+        declared in stdlib.h."
+* Refactor to support progressive rendering.
+* Thread safe queue.
+
+Wish list
+* Efficient image display in qt.
+* Thread safe queue for more efficient use of threading.
+* Unit tests for everything.
+* Code tidy up and docs.
+* CUDA
+* SSE

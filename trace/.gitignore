@@ -1,0 +1,12 @@
+*.o
+*.so
+*.png
+objects/
+lib/
+lsd/src/private_*.h
+lsd/src/private_*.ih
+lsd/src/private_*.cc
+docs/
+images/
+./trace
+in.lsd

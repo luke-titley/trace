@@ -1,0 +1,16 @@
+# ------------------------------------------------------------------------------
+# Copywrite Luke Titley 2015
+# ------------------------------------------------------------------------------
+This directory contains a tiny qt application that progressively renders an
+image and displays it whilst it's being rendered. The application links to
+libtrace in the neighbour directory.
+
+This application requires Qt 4.8.4 to be installed.
+
+The simplest way to build this application is via qtcreator.
+Opening up qtrace.pro in qtcreator and hitting build. The project contains an
+rpath reference to the libtrace so it should run without any LD_LIBRARY_PATH
+hacks.
+
+Alternatively cd into qtrace-build-desktop-Qt_4_8_1_in_PATH__System__Release
+and type 'make'.

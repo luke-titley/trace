@@ -1,0 +1,37 @@
+This directory contains the source code for a hobby ray tracer written by
+Luke Titley.
+
+This will build on ubuntu with g++ 9.
+trace has very few dependencies and requires one library outside of a standard
+ubuntu build. libpng is included and is built as part of the building of trace,
+however libpng requires zlib to be installed.
+
+Building
+========
+    To build, run unit tests and kick off a quick test render type:
+        make
+
+    Once rendering is complete there should be a file called 'out.png' in the
+    current directory.
+
+    To build just the stand alone command line ray tracer type:
+        make trace
+
+    To build and run just the unit tests type:
+        make tests
+
+    To generate qtcreator 2.4.1 project files type:
+        make qtproject
+
+
+Running
+=======
+You can run it like this.
+
+```bash
+./trace --render --samplesPerPixel 25 --inputFilename ../obj/boatForRender.obj  && display out.png
+```
+
+Docs
+    doxygen generated documentation can be found in 'docs/html' in the current
+    directory.

@@ -1,0 +1,7 @@
+Profiling notes.
+
+Lego man with a single light.
+    Max ray depth: 3
+    Samples per fragment: 3
+    Timr taken: 425 seconds
+
